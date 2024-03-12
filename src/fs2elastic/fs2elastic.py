@@ -1,0 +1,155 @@
+import subprocess
+import logging
+from logging.handlers import RotatingFileHandler
+import time
+import fnmatch
+import pathlib
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import argparse
+import pkg_resources
+from fs2elastic.confbuilder import get_config
+from elasticsearch import Elasticsearch
+
+# from fs2elastic.fs2elastic_types import ESConfig, AppConfig, SourceConfig, LogConfig
+from typing import List
+
+
+def get_version():
+    return pkg_resources.get_distribution("fs2elastic").version
+
+
+def get_es_connection(config) -> Elasticsearch:
+    es_client = Elasticsearch(
+        hosts=config["es_hosts"],
+        basic_auth=(config["es_username"], config["es_password"]),
+        request_timeout=10,
+        ca_certs=config["es_ssl_ca"],
+        verify_certs=config["es_verify_certs"],
+    )
+    print(es_client.info())
+    return es_client
+
+
+# Configure logging
+def init_logger(log_file_path, log_max_size, log_backup_count):
+    logger = logging.getLogger("")
+    logger.setLevel(logging.INFO)
+    file_handler = RotatingFileHandler(
+        log_file_path, maxBytes=log_max_size, backupCount=log_backup_count
+    )
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
+    )
+    # Add rotating file handler to the root logger
+    logger.addHandler(file_handler)
+
+
+def is_file_extensions_supported(
+    path: str, source_dir: str, supported_file_extensions: List[str]
+) -> bool:
+    """Check if the file matches any supported extensions."""
+    path = pathlib.PurePosixPath(path).relative_to(source_dir)
+    for extension in supported_file_extensions:
+        if fnmatch.fnmatch(path, f"*.{extension}"):
+            return True
+    return False
+
+
+def push_data_set(event, config):
+    # NOTE: DO SOMETHING HERE
+    try:
+        # NOTE: DO SOMETHING HERE
+        logging.info(f"SYNC_SUCCESS: {event.event_type}: {event.src_path}.")
+    except Exception as e:
+        logging.error(f"SYNC_FAILED: {event.event_type}: {event.src_path}.")
+        logging.error(f"An unexpected error occurred: {e}")
+
+
+class FSHandler(FileSystemEventHandler):
+    def __init__(self, config) -> None:
+        self.config = config
+        super().__init__()
+
+    def on_modified(self, event):
+        if event.is_directory:
+            return
+        if is_file_extensions_supported(
+            path=event.src_path,
+            source_dir=self.config["source_dir"],
+            supported_file_extensions=self.config["source_supported_file_extensions"],
+        ):
+            push_data_set(event, self.config)
+
+    def on_created(self, event):
+        if event.is_directory:
+            return
+        if is_file_extensions_supported(
+            path=event.src_path,
+            source_dir=self.config["source_dir"],
+            supported_file_extensions=self.config["source_supported_file_extensions"],
+        ):
+            push_data_set(event, self.config)
+
+
+def start_sync(config):
+    event_handler = FSHandler(config=config)
+    observer = Observer()
+    observer.schedule(event_handler, path=config["source_dir"], recursive=True)
+    observer.start()
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
+
+
+def stop_sync():
+    # Add any cleanup steps if needed
+    observer = Observer()
+    observer.stop()
+    observer.join()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="fs2elastic",
+        epilog="Please report bugs at pankajackson@live.co.uk",
+        description="Sync local directory to remote directory in daemon mode.",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        required=False,
+        type=str,
+        help=f"Config file path. default: ~/.fs2elastic/fs2elastic.conf",
+        metavar="<path>",
+    )
+    parser.add_argument(
+        "-v", "--version", required=False, action="store_true", help="Show version"
+    )
+
+    args = parser.parse_args()
+    if args.version:
+        print(f"fs2elastic: {get_version()}")
+    else:
+        config = get_config(args.config) if args.config else get_config()
+        try:
+            init_logger(
+                log_file_path=config["log_file_path"],
+                log_max_size=config["log_max_size"],
+                log_backup_count=["log_backup_count"],
+            )
+
+            es_client = get_es_connection(config)
+            start_sync(config)
+        except Exception as e:
+            logging.error(f"Error connecting to the remote host: {e}")
+            raise Exception(f"Error connecting to the remote host: {e}")
+
+
+if __name__ == "__main__":
+    main()
