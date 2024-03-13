@@ -12,20 +12,8 @@ class DatasetProcessor:
         self.source_file = source_file
         self.config = config
         self.meta = {
-            "created_at": datetime.strptime(
-                time.strftime(
-                    "%Y-%m-%d %H:%M:%S",
-                    time.strptime(time.ctime(os.path.getctime(source_file))),
-                ),
-                "%Y-%m-%d %H:%M:%S",
-            ),
-            "modified_at": datetime.strptime(
-                time.strftime(
-                    "%Y-%m-%d %H:%M:%S",
-                    time.strptime(time.ctime(os.path.getctime(source_file))),
-                ),
-                "%Y-%m-%d %H:%M:%S",
-            ),
+            "created_at": datetime.utcfromtimestamp(os.path.getctime(source_file)),
+            "modified_at": datetime.utcfromtimestamp(os.path.getmtime(source_file)),
             "source_path": source_file,
             "index": f"fs2elastic-{str(re.sub('['+re.escape(string.punctuation)+']', '',source_file)).replace(' ', '')}",
         }
