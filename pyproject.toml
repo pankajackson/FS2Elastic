@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fs2elastic"
+version = "x.x.x"
+authors = [
+  { name="Pankaj Jackson", email="pankajackson@live.co.uk" },
+]
+description = "Python based CLI for Syncing File System based Data (CSV file etc.) to Elasticsearch."
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.7"
+dependencies=['elasticsearch', 'pandas', 'toml', 'watchdog']
+keywords=['csv', 'sync', 'elasticsearch', 'data']
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: Unix",
+]
+
+[project.scripts]
+fs2elastic = "fs2elastic.fs2elastic:main"
+
+[project.urls]
+"Homepage" = "https://github.com/pankajackson/FS2Elastic"
+"Bug Tracker" = "https://github.com/pankajackson/FS2Elastic/issues"
+"Source" = "https://github.com/pankajackson/FS2Elastic"
