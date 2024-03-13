@@ -39,6 +39,7 @@ def conf_initializer(config_file_path: str) -> str:
     if not os.path.exists(config_file_path):
         file = open(config_file_path, "w")
         config = {
+            "AppConfig": {**defaults["AppConfig"]},
             "SourceConfig": {**defaults["SourceConfig"]},
             "ESConfig": {**defaults["ESConfig"]},
             "LogConfig": {**defaults["LogConfig"]},
@@ -79,6 +80,8 @@ def get_value_of(key, config_file_path):
 
 def toml_conf_reader(config_file_path: str):
     config = {
+        "app_home": get_value_of("app_home", config_file_path),
+        "app_config_file_path": get_value_of("app_config_file_path", config_file_path),
         "source_dir": get_value_of("source_dir", config_file_path),
         "source_supported_file_extensions": get_value_of(
             "source_supported_file_extensions", config_file_path
@@ -91,7 +94,7 @@ def toml_conf_reader(config_file_path: str):
         "log_file_path": get_value_of("log_file_path", config_file_path),
         "log_max_size": int(
             get_value_of("log_max_size", config_file_path),
-        ),  # 10 MB
+        ),
         "log_backup_count": int(
             get_value_of("log_backup_count", config_file_path),
         ),

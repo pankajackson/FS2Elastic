@@ -1,8 +1,11 @@
+import os
+import pathlib
+import hashlib
+import time
+import json
+import fnmatch
 import logging
 from logging.handlers import RotatingFileHandler
-import time
-import fnmatch
-import pathlib
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import argparse
@@ -58,9 +61,25 @@ def process_event(event, config):
         logging.error(f"An unexpected error occurred: {e}")
 
 
+def get_or_update_file_cache(config, event=None):
+    file_cache_path = os.path.join(config["app_home"], "file_cache.json")
+    if not os.path.exists(file_cache_path):
+        with open(file_cache_path, "w") as f:
+            f.write("{}")
+    with open(file_cache_path, "r") as f:
+        file_cache = json.load(f)
+    if event:
+        file_hash = hashlib.md5(open(event.src_path, "rb").read()).hexdigest()
+        file_cache[event.src_path] = file_hash
+        with open(file_cache_path, "w") as f:
+            json.dump(file_cache, f, indent=4)
+    return file_cache
+
+
 class FSHandler(FileSystemEventHandler):
 
     def __init__(self, config) -> None:
+        self.file_cache = get_or_update_file_cache(config)
         self.config = config
         super().__init__()
 
@@ -72,6 +91,11 @@ class FSHandler(FileSystemEventHandler):
             source_dir=self.config["source_dir"],
             supported_file_extensions=self.config["source_supported_file_extensions"],
         ):
+            file_hash = hashlib.md5(open(event.src_path, "rb").read()).hexdigest()
+            if self.file_cache.get(event.src_path) == file_hash:
+                logging.info(f"Skipping event for {event.src_path}")
+                return
+            self.file_cache = get_or_update_file_cache(self.config, event)
             process_event(event, self.config)
 
 
