@@ -13,8 +13,6 @@ import pkg_resources
 from fs2elastic.confbuilder import get_config
 from fs2elastic.dataset_processor import DatasetProcessor
 from fs2elastic.es_handler import get_es_connection
-
-# from fs2elastic.fs2elastic_types import ESConfig, AppConfig, SourceConfig, LogConfig
 from typing import List
 
 
@@ -53,8 +51,7 @@ def process_event(event, config):
     try:
         ds_processor = DatasetProcessor(source_file=event.src_path, config=config)
         logging.info(f"SYNC_STARTED: {event.src_path}.")
-        ds_processor.es_sync(chunk_size=100)
-        # NOTE: DO SOMETHING HERE
+        ds_processor.es_sync()
         logging.info(f"SYNC_SUCCESS: {event.src_path}.")
     except Exception as e:
         logging.error(f"SYNC_FAILED: {event.src_path}.")
@@ -114,7 +111,6 @@ def start_sync(config):
 
 
 def stop_sync():
-    # Add any cleanup steps if needed
     observer = Observer()
     observer.stop()
     observer.join()

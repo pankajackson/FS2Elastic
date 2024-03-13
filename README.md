@@ -112,7 +112,7 @@ log_backup_count = 5
 # create service file at /etc/systemd/system/fs2elastic.service  with following content
 
 [Unit]
-Description=RSync daemon Service
+Description=FS2Elastic Service
 After=network.target
 
 [Service]

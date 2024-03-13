@@ -29,20 +29,23 @@ class DatasetProcessor:
         """Converts the dataframe to a dictionary and returns it."""
         return self.df().to_dict(orient="records")
 
-    def __generate_chunks(self, chunk_size):
+    def __generate_chunks(self):
         """The function `__generate_chunks` takes a chunk size as input and yields chunks of records from a list in that size."""
-        for i in range(0, len(self.record_list()), chunk_size):
-            yield self.record_list()[i : i + chunk_size]
+        for i in range(
+            0, len(self.record_list()), self.config["es_max_dataset_chunk_size"]
+        ):
+            logging.info(
+                "Generating Next Chunk of %s from record index %s for %s"
+                % (self.config["es_max_dataset_chunk_size"], i, self.source_file)
+            )
+            yield self.record_list()[i : i + self.config["es_max_dataset_chunk_size"]]
 
-    def record_list_chunks(self, chunk_size: int) -> list[list[dict[Hashable, Any]]]:
-        """The function `record_list_chunks` returns a list of chunks generated from a given chunk size."""
-        return list(self.__generate_chunks(chunk_size))
-
-    def record_to_es_bulk_action(self, record, chunk_id, chunk_size):
+    def record_to_es_bulk_action(self, record, chunk_id):
 
         return {
             "_index": self.meta["index"],
-            "_id": (chunk_id * chunk_size) + record["record_id"],
+            "_id": (chunk_id * self.config["es_max_dataset_chunk_size"])
+            + record["record_id"],
             "_source": {
                 "record": record,
                 "fs2e_meta": self.meta,
@@ -50,22 +53,18 @@ class DatasetProcessor:
             },
         }
 
-    def es_sync(self, chunk_size: int):
+    def es_sync(self):
         """Synchronizes data with Elasticsearch using the configuration provided."""
         actions = []
 
         # Iterate over each chunk of records and send them to ES
-        for chunk_id, chunk in enumerate(
-            self.record_list_chunks(chunk_size=chunk_size)
-        ):
-            logging.info(f"Processing Chunk {chunk_id + 1}")
+        for chunk_id, chunk in enumerate(self.__generate_chunks()):
+            logging.info(f"Processing Chunk {chunk_id + 1} of size {len(chunk)}")
             if not chunk:  # If there are no more records, break out of loop
                 break
             else:  # Otherwise, index the records into ES
                 for record in chunk:
-                    actions.append(
-                        self.record_to_es_bulk_action(record, chunk_id, chunk_size)
-                    )
+                    actions.append(self.record_to_es_bulk_action(record, chunk_id))
                 try:
                     logging.info(f"Pushing Chunk {chunk_id + 1}")
                     # Get an ES connection object
@@ -73,6 +72,6 @@ class DatasetProcessor:
                     helpers.bulk(es_client, actions)
                 except Exception as e:
                     logging.error(f"Error Pushing Chunk {chunk_id + 1}: {e}")
-                logging.info(f"Pushed Chunk {chunk_id + 1}")
+                logging.info(f"Chunk {chunk_id + 1} Pushed Successfully!")
                 logging.info(f"Cleaning Actions of Chunk {chunk_id + 1}")
                 actions.clear()
