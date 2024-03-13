@@ -1,4 +1,3 @@
-import subprocess
 import logging
 from logging.handlers import RotatingFileHandler
 import time
@@ -9,7 +8,8 @@ from watchdog.events import FileSystemEventHandler
 import argparse
 import pkg_resources
 from fs2elastic.confbuilder import get_config
-from elasticsearch import Elasticsearch
+from fs2elastic.dataset_processor import DatasetProcessor
+from fs2elastic.es_handler import get_es_connection
 
 # from fs2elastic.fs2elastic_types import ESConfig, AppConfig, SourceConfig, LogConfig
 from typing import List
@@ -17,18 +17,6 @@ from typing import List
 
 def get_version():
     return pkg_resources.get_distribution("fs2elastic").version
-
-
-def get_es_connection(config) -> Elasticsearch:
-    es_client = Elasticsearch(
-        hosts=config["es_hosts"],
-        basic_auth=(config["es_username"], config["es_password"]),
-        request_timeout=10,
-        ca_certs=config["es_ssl_ca"],
-        verify_certs=config["es_verify_certs"],
-    )
-    print(es_client.info())
-    return es_client
 
 
 # Configure logging
@@ -57,22 +45,26 @@ def is_file_extensions_supported(
     return False
 
 
-def push_data_set(event, config):
+def process_event(event, config):
     # NOTE: DO SOMETHING HERE
     try:
+        ds_processor = DatasetProcessor(source_file=event.src_path, config=config)
+        logging.info(f"SYNC_STARTED: {event.src_path}.")
+        ds_processor.es_sync(chunk_size=100)
         # NOTE: DO SOMETHING HERE
-        logging.info(f"SYNC_SUCCESS: {event.event_type}: {event.src_path}.")
+        logging.info(f"SYNC_SUCCESS: {event.src_path}.")
     except Exception as e:
-        logging.error(f"SYNC_FAILED: {event.event_type}: {event.src_path}.")
+        logging.error(f"SYNC_FAILED: {event.src_path}.")
         logging.error(f"An unexpected error occurred: {e}")
 
 
 class FSHandler(FileSystemEventHandler):
+
     def __init__(self, config) -> None:
         self.config = config
         super().__init__()
 
-    def on_modified(self, event):
+    def on_closed(self, event):
         if event.is_directory:
             return
         if is_file_extensions_supported(
@@ -80,17 +72,7 @@ class FSHandler(FileSystemEventHandler):
             source_dir=self.config["source_dir"],
             supported_file_extensions=self.config["source_supported_file_extensions"],
         ):
-            push_data_set(event, self.config)
-
-    def on_created(self, event):
-        if event.is_directory:
-            return
-        if is_file_extensions_supported(
-            path=event.src_path,
-            source_dir=self.config["source_dir"],
-            supported_file_extensions=self.config["source_supported_file_extensions"],
-        ):
-            push_data_set(event, self.config)
+            process_event(event, self.config)
 
 
 def start_sync(config):
@@ -144,7 +126,7 @@ def main():
                 log_backup_count=["log_backup_count"],
             )
 
-            es_client = get_es_connection(config)
+            logging.info(get_es_connection(config).info())
             start_sync(config)
         except Exception as e:
             logging.error(f"Error connecting to the remote host: {e}")
