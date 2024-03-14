@@ -1,12 +1,14 @@
 from elasticsearch import Elasticsearch
+from fs2elastic.typings import Config
 
 
-def get_es_connection(config) -> Elasticsearch:
+def get_es_connection(config: Config) -> Elasticsearch:
+
     es_client = Elasticsearch(
-        hosts=config["es_hosts"],
-        basic_auth=(config["es_username"], config["es_password"]),
+        hosts=config.es_hosts,
+        basic_auth=(config.es_username, config.es_password),
         request_timeout=300,
-        ca_certs=config["es_ssl_ca"],
-        verify_certs=config["es_verify_certs"],
+        ca_certs=config.es_ssl_ca,
+        verify_certs=config.es_verify_certs,
     )
     return es_client

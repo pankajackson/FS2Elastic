@@ -12,7 +12,7 @@ description = "Python based CLI for Syncing File System based Data (CSV file etc
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.7"
-dependencies=['elasticsearch', 'pandas', 'toml', 'watchdog']
+dependencies=['elasticsearch', 'pandas', 'pydantic', 'toml', 'watchdog']
 keywords=['csv', 'sync', 'elasticsearch', 'data']
 classifiers = [
     "Programming Language :: Python :: 3",
