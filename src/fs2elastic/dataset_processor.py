@@ -5,15 +5,15 @@ import logging
 from datetime import datetime
 import pytz
 from elasticsearch import helpers
-from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from fs2elastic.es_handler import get_es_connection
 from fs2elastic.typings import Config
 
 
 class DatasetProcessor:
-    def __init__(self, source_file: str, config: Config) -> None:
+    def __init__(self, source_file: str, config: Config, id: str) -> None:
         self.source_file = source_file
         self.config = config
+        self.process_id = id
         self.meta = {
             "created_at": datetime.fromtimestamp(
                 os.path.getctime(source_file), tz=pytz.UTC
@@ -43,8 +43,8 @@ class DatasetProcessor:
             0, len(self.record_list()), self.config.es_max_dataset_chunk_size
         ):
             logging.info(
-                "Generating Next Chunk of %s from record index %s for %s"
-                % (self.config.es_max_dataset_chunk_size, i, self.source_file)
+                "%s: Generating Chunk of %s from index %s"
+                % (self.process_id, self.config.es_max_dataset_chunk_size, i)
             )
             yield self.record_list()[i : i + self.config.es_max_dataset_chunk_size]
 
@@ -65,23 +65,27 @@ class DatasetProcessor:
 
     def es_sync(self) -> None:
         """Synchronizes data with Elasticsearch using the configuration provided."""
-        actions = []
+
+        es_client = get_es_connection(self.config)
 
         # Iterate over each chunk of records and send them to ES
         for chunk_id, chunk in enumerate(self.__generate_chunks()):
-            logging.info(f"Processing Chunk {chunk_id + 1} of size {len(chunk)}")
             if not chunk:  # If there are no more records, break out of loop
                 break
             else:  # Otherwise, index the records into ES
-                for record in chunk: #TODO: CONVERT THIS LOOP in map() function
-                    actions.append(self.record_to_es_bulk_action(record, chunk_id))
                 try:
-                    logging.info(f"Pushing Chunk {chunk_id + 1}")
-                    # Get an ES connection object
-                    es_client = get_es_connection(self.config)
-                    helpers.bulk(es_client, actions)
-                    logging.info(f"Chunk {chunk_id + 1} Pushed Successfully!")
+                    helpers.bulk(
+                        client=es_client,
+                        actions=map(
+                            self.record_to_es_bulk_action,
+                            chunk,
+                            [chunk_id] * len(chunk),
+                        ),
+                    )
+                    logging.info(
+                        f"{self.process_id}: Chunk {chunk_id + 1} Pushed Successfully!"
+                    )
                 except Exception as e:
-                    logging.error(f"Error Pushing Chunk {chunk_id + 1}: {e}")
-                logging.info(f"Cleaning Actions of Chunk {chunk_id + 1}")
-                actions.clear()
+                    logging.error(
+                        f"{self.process_id}: Error Pushing Chunk {chunk_id + 1}: {e}"
+                    )

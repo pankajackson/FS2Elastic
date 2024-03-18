@@ -4,6 +4,7 @@ import hashlib
 import time
 import json
 import fnmatch
+import uuid
 import logging
 from logging.handlers import RotatingFileHandler
 from watchdog.observers import Observer
@@ -46,15 +47,20 @@ def is_file_extensions_supported(
     return False
 
 
-def process_event(config: Config, event: FileSystemEvent):
+def process_event(config: Config, event: FileSystemEvent) -> bool:
     try:
-        ds_processor = DatasetProcessor(source_file=event.src_path, config=config)
-        logging.info(f"SYNC_STARTED: {event.src_path}.")
+        process_id = uuid.uuid4().hex
+        ds_processor = DatasetProcessor(
+            source_file=event.src_path, config=config, id=process_id
+        )
+        logging.info(f"SYNC_STARTED: {process_id} {event.src_path}.")
         ds_processor.es_sync()
-        logging.info(f"SYNC_SUCCESS: {event.src_path}.")
+        logging.info(f"SYNC_SUCCESS: {process_id} {event.src_path}.")
+        return True
     except Exception as e:
-        logging.error(f"SYNC_FAILED: {event.src_path}.")
+        logging.error(f"SYNC_FAILED: {process_id} {event.src_path}.")
         logging.error(f"An unexpected error occurred: {e}")
+        return False
 
 
 def get_or_update_file_cache(config: Config, event: FileSystemEvent | None = None):
@@ -91,8 +97,10 @@ class FSHandler(FileSystemEventHandler):
             if self.file_cache.get(event.src_path) == file_hash:
                 logging.info(f"Skipping event for {event.src_path}")
                 return
-            process_event(config=self.config, event=event)
-            self.file_cache = get_or_update_file_cache(config=self.config, event=event)
+            if process_event(config=self.config, event=event):
+                self.file_cache = get_or_update_file_cache(
+                    config=self.config, event=event
+                )
 
 
 def start_sync(config: Config) -> None:
