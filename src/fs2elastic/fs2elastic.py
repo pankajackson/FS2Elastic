@@ -53,7 +53,6 @@ def process_event(config: Config, event: FileSystemEvent):
         ds_processor.es_sync()
         logging.info(f"SYNC_SUCCESS: {event.src_path}.")
     except Exception as e:
-        print(type(event))
         logging.error(f"SYNC_FAILED: {event.src_path}.")
         logging.error(f"An unexpected error occurred: {e}")
 

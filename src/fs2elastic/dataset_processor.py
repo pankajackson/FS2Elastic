@@ -1,6 +1,6 @@
 import os, string, re
 import pandas as pd
-from typing import Any, Hashable
+from typing import Any, Generator, Hashable
 import logging
 from datetime import datetime
 import pytz
@@ -11,7 +11,7 @@ from fs2elastic.typings import Config
 
 
 class DatasetProcessor:
-    def __init__(self, source_file: str, config: Config):
+    def __init__(self, source_file: str, config: Config) -> None:
         self.source_file = source_file
         self.config = config
         self.meta = {
@@ -37,7 +37,7 @@ class DatasetProcessor:
         """Converts the dataframe to a dictionary and returns it."""
         return self.df().to_dict(orient="records")
 
-    def __generate_chunks(self):
+    def __generate_chunks(self) -> Generator[list[dict[Hashable, Any]], Any, None]:
         """The function `__generate_chunks` takes a chunk size as input and yields chunks of records from a list in that size."""
         for i in range(
             0, len(self.record_list()), self.config.es_max_dataset_chunk_size
@@ -48,7 +48,9 @@ class DatasetProcessor:
             )
             yield self.record_list()[i : i + self.config.es_max_dataset_chunk_size]
 
-    def record_to_es_bulk_action(self, record, chunk_id):
+    def record_to_es_bulk_action(
+        self, record: dict[str, Any], chunk_id: int
+    ) -> dict[str, Any]:
 
         return {
             "_index": self.meta["index"],
@@ -61,7 +63,7 @@ class DatasetProcessor:
             },
         }
 
-    def es_sync(self):
+    def es_sync(self) -> None:
         """Synchronizes data with Elasticsearch using the configuration provided."""
         actions = []
 
@@ -71,7 +73,7 @@ class DatasetProcessor:
             if not chunk:  # If there are no more records, break out of loop
                 break
             else:  # Otherwise, index the records into ES
-                for record in chunk:
+                for record in chunk: #TODO: CONVERT THIS LOOP in map() function
                     actions.append(self.record_to_es_bulk_action(record, chunk_id))
                 try:
                     logging.info(f"Pushing Chunk {chunk_id + 1}")
