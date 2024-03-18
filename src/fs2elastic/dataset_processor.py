@@ -4,8 +4,9 @@ from typing import Any, Generator, Hashable
 import logging
 from datetime import datetime
 import pytz
+from concurrent.futures import ThreadPoolExecutor
 from elasticsearch import helpers
-from fs2elastic.es_handler import get_es_connection
+from fs2elastic.es_handler import get_es_connection, put_es_bulk
 from fs2elastic.typings import Config
 
 
@@ -68,24 +69,31 @@ class DatasetProcessor:
 
         es_client = get_es_connection(self.config)
 
-        # Iterate over each chunk of records and send them to ES
-        for chunk_id, chunk in enumerate(self.__generate_chunks()):
-            if not chunk:  # If there are no more records, break out of loop
-                break
-            else:  # Otherwise, index the records into ES
-                try:
-                    helpers.bulk(
-                        client=es_client,
-                        actions=map(
-                            self.record_to_es_bulk_action,
-                            chunk,
-                            [chunk_id] * len(chunk),
-                        ),
-                    )
-                    logging.info(
-                        f"{self.process_id}: Chunk {chunk_id + 1} Pushed Successfully!"
-                    )
-                except Exception as e:
-                    logging.error(
-                        f"{self.process_id}: Error Pushing Chunk {chunk_id + 1}: {e}"
-                    )
+        with ThreadPoolExecutor(
+            max_workers=self.config.es_max_worker_count
+        ) as executer:
+
+            # Iterate over each chunk of records and send them to ES
+            for chunk_id, chunk in enumerate(self.__generate_chunks()):
+                if not chunk:  # If there are no more records, break out of loop
+                    break
+                else:  # Otherwise, index the records into ES
+                    try:
+                        executer.submit(
+                            put_es_bulk,
+                            self.config,
+                            map(
+                                self.record_to_es_bulk_action,
+                                chunk,
+                                [chunk_id] * len(chunk),
+                            ),
+                            self.process_id,
+                            chunk_id,
+                        )
+                        logging.info(
+                            f"{self.process_id}: Chunk {chunk_id + 1} Requested!"
+                        )
+                    except Exception as e:
+                        logging.error(
+                            f"{self.process_id}: Error Requesting Chunk {chunk_id + 1}: {e}"
+                        )

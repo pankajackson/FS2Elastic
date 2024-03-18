@@ -6,6 +6,7 @@ import json
 import fnmatch
 import uuid
 import logging
+import datetime
 from logging.handlers import RotatingFileHandler
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
@@ -54,8 +55,13 @@ def process_event(config: Config, event: FileSystemEvent) -> bool:
             source_file=event.src_path, config=config, id=process_id
         )
         logging.info(f"SYNC_STARTED: {process_id} {event.src_path}.")
+        start_time = datetime.datetime.now()
         ds_processor.es_sync()
-        logging.info(f"SYNC_SUCCESS: {process_id} {event.src_path}.")
+        end_time = datetime.datetime.now()
+        total_time = end_time - start_time
+        logging.info(
+            f"SYNC_SUCCESS: {process_id} [duration: {total_time}] {event.src_path}."
+        )
         return True
     except Exception as e:
         logging.error(f"SYNC_FAILED: {process_id} {event.src_path}.")

@@ -18,10 +18,12 @@ defaults = {
         "es_hosts": ["http://localhost:9200"],
         "es_username": "elastic",
         "es_password": "",
+        "es_timeout": 300,
         "es_index_prefix": "fs2elastic-",
         "es_ssl_ca": None,
         "es_verify_certs": False,
         "es_max_dataset_chunk_size": 100,
+        "es_max_worker_count": 3,
     },
     "LogConfig": {
         "log_file_path": str(os.path.join(fs2elastic_home, "fs2elastic.log")),
@@ -85,12 +87,14 @@ def toml_conf_reader(config_file_path: str) -> Config:
         "es_hosts": get_value_of("es_hosts", config_file_path),
         "es_username": get_value_of("es_username", config_file_path),
         "es_password": get_value_of("es_password", config_file_path),
+        "es_timeout": get_value_of("es_timeout", config_file_path),
         "es_index_prefix": get_value_of("es_index_prefix", config_file_path),
         "es_ssl_ca": get_value_of("es_ssl_ca", config_file_path),
         "es_verify_certs": get_value_of("es_verify_certs", config_file_path),
         "es_max_dataset_chunk_size": get_value_of(
             "es_max_dataset_chunk_size", config_file_path
         ),
+        "es_max_worker_count": get_value_of("es_max_worker_count", config_file_path),
         "log_file_path": get_value_of("log_file_path", config_file_path),
         "log_max_size": int(
             get_value_of("log_max_size", config_file_path),
