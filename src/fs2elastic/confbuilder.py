@@ -18,6 +18,7 @@ defaults = {
         "es_hosts": ["http://localhost:9200"],
         "es_username": "elastic",
         "es_password": "",
+        "es_index_prefix": "fs2elastic-",
         "es_ssl_ca": None,
         "es_verify_certs": False,
         "es_max_dataset_chunk_size": 100,
@@ -84,6 +85,7 @@ def toml_conf_reader(config_file_path: str) -> Config:
         "es_hosts": get_value_of("es_hosts", config_file_path),
         "es_username": get_value_of("es_username", config_file_path),
         "es_password": get_value_of("es_password", config_file_path),
+        "es_index_prefix": get_value_of("es_index_prefix", config_file_path),
         "es_ssl_ca": get_value_of("es_ssl_ca", config_file_path),
         "es_verify_certs": get_value_of("es_verify_certs", config_file_path),
         "es_max_dataset_chunk_size": get_value_of(

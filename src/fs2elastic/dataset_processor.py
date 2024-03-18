@@ -22,7 +22,7 @@ class DatasetProcessor:
                 os.path.getmtime(source_file), tz=pytz.UTC
             ),
             "source_path": source_file,
-            "index": f"fs2elastic-{str(re.sub('['+re.escape(string.punctuation)+']', '',source_file)).replace(' ', '')}".lower(),
+            "index": f"{self.config.es_index_prefix}{str(re.sub('['+re.escape(string.punctuation)+']', '',source_file)).replace(' ', '')}".lower(),
         }
 
     def df(self) -> pd.DataFrame:

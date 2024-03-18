@@ -19,6 +19,7 @@ class ESConfig(BaseModel):
     es_hosts: list[HttpUrlString]
     es_username: str
     es_password: str
+    es_index_prefix: str
     es_ssl_ca: FilePath | None
     es_verify_certs: bool
     es_max_dataset_chunk_size: int
