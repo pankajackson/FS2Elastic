@@ -60,7 +60,7 @@ def process_event(config: Config, event: FileSystemEvent) -> bool:
         end_time = datetime.datetime.now()
         total_time = end_time - start_time
         logging.info(
-            f"SYNC_SUCCESS: {process_id} [duration: {total_time}] {event.src_path}."
+            f"SYNC_FINISHED: {process_id} [duration: {total_time}] {event.src_path}."
         )
         return True
     except Exception as e:

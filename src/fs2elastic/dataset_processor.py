@@ -28,7 +28,18 @@ class DatasetProcessor:
 
     def df(self) -> pd.DataFrame:
         """Returns a pandas DataFrame from the source file."""
-        df = pd.read_csv(self.source_file)
+        match os.path.splitext(self.source_file)[-1]:
+            case ".csv":
+                df = pd.read_csv(self.source_file)
+            case ".xlsx" | ".xls":
+                df = pd.read_excel(self.source_file)
+            case ".json":
+                df = pd.read_json(self.source_file)
+            case _:
+                logging.error(
+                    f"{self.process_id}: {os.path.splitext(self.source_file)[-1]} filetype not supported"
+                )
+                return pd.DataFrame()
         df.columns = df.columns.str.strip()
         df.fillna("", inplace=True)
         df["record_id"] = df.index
