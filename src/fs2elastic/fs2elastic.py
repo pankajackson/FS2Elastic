@@ -91,7 +91,7 @@ class FSHandler(FileSystemEventHandler):
         self.config = config
         super().__init__()
 
-    def on_closed(self, event: FileSystemEvent):
+    def process_event(self, event: FileSystemEvent) -> None:
         if event.is_directory:
             return
         if is_file_extensions_supported(
@@ -107,6 +107,12 @@ class FSHandler(FileSystemEventHandler):
                 self.file_cache = get_or_update_file_cache(
                     config=self.config, event=event
                 )
+
+    def on_created(self, event: FileSystemEvent) -> None:
+        self.process_event(event=event)
+
+    def on_modified(self, event: FileSystemEvent) -> None:
+        self.process_event(event=event)
 
 
 def start_sync(config: Config) -> None:
