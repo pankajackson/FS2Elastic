@@ -48,28 +48,28 @@ def conf_initializer(config_file_path: str) -> str:
     return config_file_path
 
 
-def get_value_of(key, config_file_path):
+def get_value_of(key: str, config_file_path):
     # Read configuration from  ~/.fs2elastic/fs2elastic.conf
     with open(config_file_path, "r") as f:
         toml_config = toml.load(f)
     if key.startswith("app_"):
         try:
-            return toml_config["AppConfig"][key]
+            return os.getenv(f"FS2ES_{key.upper()}", toml_config["AppConfig"][key])
         except KeyError:
             return defaults["AppConfig"][key]
     elif key.startswith("source_"):
         try:
-            return toml_config["SourceConfig"][key]
+            return os.getenv(f"FS2ES_{key.upper()}", toml_config["SourceConfig"][key])
         except KeyError:
             return defaults["SourceConfig"][key]
     elif key.startswith("es_"):
         try:
-            return toml_config["ESConfig"][key]
+            return os.getenv(f"FS2ES_{key.upper()}", toml_config["ESConfig"][key])
         except KeyError:
             return defaults["ESConfig"][key]
     elif key.startswith("log_"):
         try:
-            return toml_config["LogConfig"][key]
+            return os.getenv(f"FS2ES_{key.upper()}", toml_config["LogConfig"][key])
         except KeyError:
             return defaults["LogConfig"][key]
     else:

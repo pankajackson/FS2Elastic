@@ -78,8 +78,6 @@ class DatasetProcessor:
     def es_sync(self) -> None:
         """Synchronizes data with Elasticsearch using the configuration provided."""
 
-        es_client = get_es_connection(self.config)
-
         with ThreadPoolExecutor(
             max_workers=self.config.es_max_worker_count
         ) as executer:
