@@ -2,34 +2,14 @@ import os
 import pwd
 import toml
 from pathlib import Path
-from fs2elastic.typings import Config
+from fs2elastic.typings import Config, AppConfig, SourceConfig, ESConfig, LogConfig
 
 fs2elastic_home = os.path.join(pwd.getpwuid(os.getuid()).pw_dir, ".fs2elastic")
 defaults = {
-    "AppConfig": {
-        "app_home": fs2elastic_home,
-        "app_config_file_path": os.path.join(fs2elastic_home, "fs2elastic.conf"),
-    },
-    "SourceConfig": {
-        "source_dir": pwd.getpwuid(os.getuid()).pw_dir,
-        "source_supported_file_extensions": ["csv"],
-    },
-    "ESConfig": {
-        "es_hosts": ["http://localhost:9200"],
-        "es_username": "elastic",
-        "es_password": "",
-        "es_timeout": 300,
-        "es_index_prefix": "fs2elastic-",
-        "es_ssl_ca": None,
-        "es_verify_certs": False,
-        "es_max_dataset_chunk_size": 100,
-        "es_max_worker_count": 3,
-    },
-    "LogConfig": {
-        "log_file_path": str(os.path.join(fs2elastic_home, "fs2elastic.log")),
-        "log_max_size": 10 * 1024 * 1024,  # 10MB
-        "log_backup_count": 5,
-    },
+    "AppConfig": AppConfig().model_dump(),
+    "SourceConfig": SourceConfig().model_dump(),
+    "ESConfig": ESConfig().model_dump(),
+    "LogConfig": LogConfig().model_dump(),
 }
 
 
