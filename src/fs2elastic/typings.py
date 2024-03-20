@@ -12,9 +12,12 @@ class AppConfig(BaseModel):
     app_config_file_path: FilePath = os.path.join(fs2elastic_home, "fs2elastic.conf")
 
 
-class SourceConfig(BaseModel):
-    source_dir: DirectoryPath = pwd.getpwuid(os.getuid()).pw_dir
-    source_supported_file_extensions: list[str] = ["csv", "xlsx", "xls", "json"]
+class DatasetConfig(BaseModel):
+    dataset_source_dir: DirectoryPath = pwd.getpwuid(os.getuid()).pw_dir
+    dataset_supported_file_extensions: list[str] = ["csv", "xlsx", "xls", "json"]
+    dataset_max_workers: int = 1
+    dataset_threads_per_worker: int = 10
+    dataset_chunk_size: int = 200
 
 
 class ESConfig(BaseModel):
@@ -25,8 +28,6 @@ class ESConfig(BaseModel):
     es_index_prefix: str = "fs2elastic-"
     es_ssl_ca: FilePath | None = None
     es_verify_certs: bool = False
-    es_max_dataset_chunk_size: int = 100
-    es_max_worker_count: int = 3
 
 
 class LogConfig(BaseModel):
@@ -35,6 +36,6 @@ class LogConfig(BaseModel):
     log_backup_count: int = 5
 
 
-class Config(AppConfig, SourceConfig, ESConfig, LogConfig):
+class Config(AppConfig, DatasetConfig, ESConfig, LogConfig):
     class Config:
         extra = "forbid"

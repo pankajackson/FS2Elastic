@@ -1,6 +1,7 @@
 import os, string, re
 import pandas as pd
 from typing import Any, Generator
+from threading import current_thread
 import logging
 from datetime import datetime
 import pytz
@@ -50,8 +51,7 @@ class DatasetProcessor:
 
         return {
             "_index": self.meta["index"],
-            "_id": (chunk_id * self.config.es_max_dataset_chunk_size)
-            + record["record_id"],
+            "_id": record["record_id"],
             "_source": {
                 "record": record,
                 "fs2e_meta": self.meta,
@@ -63,7 +63,11 @@ class DatasetProcessor:
         self, batch_count: int
     ) -> Generator[pd.DataFrame, Any, None]:
         df_length = self.df().shape[0]
-        print("Length is", "==" * 5, df_length)
+        if df_length <= self.config.dataset_chunk_size:
+            batch_count = 1
+            logging.info(
+                f"{self.event_id}: Small Dataset Detected, Proceeding in a single batch"
+            )
         batch_size = df_length // batch_count
         extra_records = df_length % batch_count
 
@@ -80,24 +84,28 @@ class DatasetProcessor:
         for i in range(
             0,
             data_frame.shape[0],
-            self.config.es_max_dataset_chunk_size,
+            self.config.dataset_chunk_size,
         ):
-            yield data_frame[i : i + self.config.es_max_dataset_chunk_size]
+            yield data_frame[i : i + self.config.dataset_chunk_size]
 
     def process_chunk(self, chunk: pd.DataFrame, chunk_id: int) -> None:
-        put_es_bulk(
-            config=self.config,
-            actions=map(
-                self.record_to_es_bulk_action,
-                chunk.to_dict(orient="records"),
-                [chunk_id] * len(chunk),
-            ),
-            event_id=self.event_id,
-        )
+        try:
+            put_es_bulk(
+                config=self.config,
+                actions=map(
+                    self.record_to_es_bulk_action,
+                    chunk.to_dict(orient="records"),
+                    [chunk_id] * len(chunk),
+                ),
+            )
+        except Exception as e:
+            logging.error(
+                f"{self.event_id}: Error Pushing Chunk {current_thread().name}: {e}"
+            )
 
     def process_batch(self, data_frame_batch: pd.DataFrame, batch_id: int) -> None:
         with ThreadPoolExecutor(
-            max_workers=self.config.es_max_worker_count,
+            max_workers=self.config.dataset_threads_per_worker,
             thread_name_prefix=f"{os.getpid()}:{batch_id}",
         ) as executor:
             for chunk_id, chunk in enumerate(self.__generate_chunks(data_frame_batch)):
@@ -112,8 +120,12 @@ class DatasetProcessor:
                         )
 
     def process_dataframe(self):
-        with ProcessPoolExecutor(max_workers=8) as executor:
-            for batch_id, batch in enumerate(self.__generate_batches(batch_count=8)):
+        with ProcessPoolExecutor(
+            max_workers=self.config.dataset_max_workers
+        ) as executor:
+            for batch_id, batch in enumerate(
+                self.__generate_batches(batch_count=self.config.dataset_max_workers)
+            ):
                 if batch.empty:
                     break
                 else:

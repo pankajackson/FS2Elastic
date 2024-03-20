@@ -96,8 +96,8 @@ class FSHandler(FileSystemEventHandler):
             return
         if is_file_extensions_supported(
             path=event.src_path,
-            source_dir=self.config.source_dir,
-            supported_file_extensions=self.config.source_supported_file_extensions,
+            source_dir=self.config.dataset_source_dir,
+            supported_file_extensions=self.config.dataset_supported_file_extensions,
         ):
             file_hash = hashlib.md5(open(event.src_path, "rb").read()).hexdigest()
             if self.file_cache.get(event.src_path) == file_hash:
@@ -118,7 +118,7 @@ class FSHandler(FileSystemEventHandler):
 def start_sync(config: Config) -> None:
     event_handler = FSHandler(config)
     observer = Observer()
-    observer.schedule(event_handler, path=config.source_dir, recursive=True)
+    observer.schedule(event_handler, path=config.dataset_source_dir, recursive=True)
     observer.start()
 
     try:
