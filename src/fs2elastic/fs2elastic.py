@@ -50,21 +50,21 @@ def is_file_extensions_supported(
 
 def process_event(config: Config, event: FileSystemEvent) -> bool:
     try:
-        process_id = uuid.uuid4().hex
+        event_id = uuid.uuid4().hex
         ds_processor = DatasetProcessor(
-            source_file=event.src_path, config=config, id=process_id
+            source_file=event.src_path, config=config, event_id=event_id
         )
-        logging.info(f"SYNC_STARTED: {process_id} {event.src_path}.")
+        logging.info(f"SYNC_STARTED: {event_id} {event.src_path}.")
         start_time = datetime.datetime.now()
         ds_processor.es_sync()
         end_time = datetime.datetime.now()
         total_time = end_time - start_time
         logging.info(
-            f"SYNC_FINISHED: {process_id} [duration: {total_time}] {event.src_path}."
+            f"SYNC_FINISHED: {event_id} [duration: {total_time}] {event.src_path}."
         )
         return True
     except Exception as e:
-        logging.error(f"SYNC_FAILED: {process_id} {event.src_path}.")
+        logging.error(f"SYNC_FAILED: {event_id} {event.src_path}.")
         logging.error(f"An unexpected error occurred: {e}")
         return False
 

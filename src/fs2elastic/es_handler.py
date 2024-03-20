@@ -1,3 +1,4 @@
+from threading import current_thread
 import logging
 from elasticsearch import Elasticsearch, helpers
 from fs2elastic.typings import Config
@@ -15,10 +16,9 @@ def get_es_connection(config: Config) -> Elasticsearch:
     return es_client
 
 
-def put_es_bulk(config: Config, actions, process_id, chunk_id) -> None:
+def put_es_bulk(config: Config, actions, event_id) -> None:
     try:
         es_client = get_es_connection(config)
         helpers.bulk(client=es_client, actions=actions)
-        logging.info(f"{process_id}: Chunk {chunk_id + 1} Pushed Successfully!")
     except Exception as e:
-        logging.error(f"{process_id}: Error Pushing Chunk {chunk_id + 1}: {e}")
+        logging.error(f"{event_id}: Error Pushing Chunk {current_thread().name}: {e}")
