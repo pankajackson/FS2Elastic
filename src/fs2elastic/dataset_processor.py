@@ -12,6 +12,24 @@ from fs2elastic.typings import Config
 
 class DatasetProcessor:
     def __init__(self, source_file: str, config: Config, event_id: str) -> None:
+        """
+        The function initializes an object with source file information, configuration settings, and event
+        ID, along with metadata including creation and modification timestamps and index details.
+
+        :param source_file: The `source_file` parameter in the `__init__` method is a string that represents
+        the path to a source file. It is used to initialize the `source_file` attribute of the class
+        instance
+        :type source_file: str
+        :param config: The `config` parameter in the `__init__` method is of type `Config`. It is used to
+        store configuration settings or options that can be accessed and used within the class. This could
+        include settings related to the behavior of the class, default values, or any other configuration
+        data needed for
+        :type config: Config
+        :param event_id: The `event_id` parameter in the `__init__` method is a string that represents the
+        unique identifier for an event. It is one of the parameters required for initializing an instance of
+        the class that this method belongs to
+        :type event_id: str
+        """
         self.source_file = source_file
         self.config = config
         self.event_id = event_id
@@ -27,7 +45,10 @@ class DatasetProcessor:
         }
 
     def df(self) -> pd.DataFrame:
-        """Returns a pandas DataFrame from the source file."""
+        """
+        This function reads a file into a pandas DataFrame based on its file extension and performs some
+        data cleaning operations.
+        """
         match os.path.splitext(self.source_file)[-1]:
             case ".csv":
                 df = pd.read_csv(self.source_file)
@@ -45,10 +66,24 @@ class DatasetProcessor:
         df["record_id"] = df.index
         return df
 
-    def record_to_es_bulk_action(
-        self, record: dict[str, Any], chunk_id: int
-    ) -> dict[str, Any]:
+    def record_to_es_bulk_action(self, record: dict[str, Any]) -> dict[str, Any]:
+        """
+        The function `record_to_es_bulk_action` creates a dictionary for bulk indexing a record in
+        Elasticsearch.
 
+        :param record: The `record` parameter is a dictionary containing information about a record. It is
+        expected to have a key "record_id" which will be used as the "_id" in the Elasticsearch bulk action.
+        The function `record_to_es_bulk_action` creates a dictionary in the format required for bulk
+        indexing in
+        :type record: dict[str, Any]
+        :return: A dictionary is being returned with the following keys and values:
+        - "_index": the value of self.meta["index"]
+        - "_id": the value of record["record_id"]
+        - "_source": a dictionary containing the following key-value pairs:
+            - "record": the input record dictionary
+            - "fs2e_meta": the value of self.meta
+            - "timestamp": the current
+        """
         return {
             "_index": self.meta["index"],
             "_id": record["record_id"],
@@ -62,6 +97,14 @@ class DatasetProcessor:
     def __generate_batches(
         self, batch_count: int
     ) -> Generator[pd.DataFrame, Any, None]:
+        """
+        This function generates batches of data from a DataFrame based on the specified batch count.
+
+        :param batch_count: The `batch_count` parameter represents the number of batches you want to
+        generate from the dataset. It determines how many chunks the dataset will be divided into for
+        processing
+        :type batch_count: int
+        """
         df_length = self.df().shape[0]
         if df_length <= self.config.dataset_chunk_size:
             batch_count = 1
@@ -81,6 +124,15 @@ class DatasetProcessor:
     def __generate_chunks(
         self, data_frame: pd.DataFrame
     ) -> Generator[pd.DataFrame, Any, None]:
+        """
+        This function generates chunks of a pandas DataFrame based on a specified chunk size.
+
+        :param data_frame: The `data_frame` parameter is a Pandas DataFrame that contains the data to be
+        processed in chunks. The function `__generate_chunks` generates chunks of the DataFrame based on the
+        specified chunk size from the configuration (`self.config.dataset_chunk_size`). It yields these
+        chunks one by one using a generator
+        :type data_frame: pd.DataFrame
+        """
         for i in range(
             0,
             data_frame.shape[0],
@@ -88,14 +140,22 @@ class DatasetProcessor:
         ):
             yield data_frame[i : i + self.config.dataset_chunk_size]
 
-    def process_chunk(self, chunk: pd.DataFrame, chunk_id: int) -> None:
+    def process_chunk(self, chunk: pd.DataFrame) -> None:
+        """
+        The function processes a chunk of data by converting it to Elasticsearch bulk actions and pushing it
+        to Elasticsearch, with error handling.
+
+        :param chunk: The `chunk` parameter in the `process_chunk` method is expected to be a pandas
+        DataFrame containing the data that needs to be processed. This method processes the chunk of data by
+        converting it into a dictionary format and then pushing it to Elasticsearch in bulk using the
+        `put_es_bulk` function. If
+        :type chunk: pd.DataFrame
+        """
         try:
             put_es_bulk(
                 config=self.config,
                 actions=map(
-                    self.record_to_es_bulk_action,
-                    chunk.to_dict(orient="records"),
-                    [chunk_id] * len(chunk),
+                    self.record_to_es_bulk_action, chunk.to_dict(orient="records")
                 ),
             )
         except Exception as e:
@@ -104,6 +164,17 @@ class DatasetProcessor:
             )
 
     def process_batch(self, data_frame_batch: pd.DataFrame, batch_id: int) -> None:
+        """
+        The `process_batch` function processes a batch of data frames in parallel using ThreadPoolExecutor.
+
+        :param data_frame_batch: The `data_frame_batch` parameter is a Pandas DataFrame that contains the
+        data to be processed in batches
+        :type data_frame_batch: pd.DataFrame
+        :param batch_id: The `batch_id` parameter in the `process_batch` method is an integer that
+        represents the identifier of the current batch being processed. It is used to uniquely identify the
+        batch and can be helpful for tracking and logging purposes during batch processing
+        :type batch_id: int
+        """
         with ThreadPoolExecutor(
             max_workers=self.config.dataset_threads_per_worker,
             thread_name_prefix=f"{os.getpid()}:{batch_id}",
@@ -113,13 +184,17 @@ class DatasetProcessor:
                     break
                 else:
                     try:
-                        executor.submit(self.process_chunk, chunk, chunk_id)
+                        executor.submit(self.process_chunk, chunk)
                     except Exception as e:
                         logging.error(
                             f"{self.event_id}: Error Requesting Chunk {chunk_id + 1}: {e}"
                         )
 
     def process_dataframe(self):
+        """
+        The `process_dataframe` function uses a `ProcessPoolExecutor` to process batches of data in
+        parallel.
+        """
         with ProcessPoolExecutor(
             max_workers=self.config.dataset_max_workers
         ) as executor:
@@ -137,4 +212,7 @@ class DatasetProcessor:
                         )
 
     def es_sync(self):
+        """
+        The `es_sync` function in Python likely processes a dataframe.
+        """
         self.process_dataframe()

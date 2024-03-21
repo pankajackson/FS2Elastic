@@ -1,10 +1,15 @@
 import os
-import pwd
 import toml
 from pathlib import Path
 from fs2elastic.typings import Config, AppConfig, DatasetConfig, ESConfig, LogConfig
 
-fs2elastic_home = os.path.join(pwd.getpwuid(os.getuid()).pw_dir, ".fs2elastic")
+
+# The `defaults` dictionary is being initialized with key-value pairs where the keys represent
+# different configuration types ("AppConfig", "DatasetConfig", "ESConfig", "LogConfig") and the values
+# are the default configurations for each type obtained by calling the `model_dump()` method on
+# instances of the respective configuration classes (`AppConfig`, `DatasetConfig`, `ESConfig`,
+# `LogConfig`). These default configurations will be used as fallback values when specific
+# configuration keys are not found in the configuration file or environment variables.
 defaults = {
     "AppConfig": AppConfig().model_dump(),
     "DatasetConfig": DatasetConfig().model_dump(),
@@ -14,6 +19,16 @@ defaults = {
 
 
 def conf_initializer(config_file_path: str) -> str:
+    """
+    The function `conf_initializer` creates a configuration file with default settings if it does not
+    already exist.
+
+    :param config_file_path: The `config_file_path` parameter is a string that represents the file path
+    where the configuration file will be created or updated
+    :type config_file_path: str
+    :return: The function `conf_initializer` is returning the `config_file_path` variable, which is a
+    string representing the path to the configuration file that was either created or already existed.
+    """
     if not os.path.exists(config_file_path):
         file = open(config_file_path, "w")
         config = {
@@ -29,6 +44,24 @@ def conf_initializer(config_file_path: str) -> str:
 
 
 def get_value_of(key: str, config_file_path):
+    """
+    The function `get_value_of` reads a configuration file and retrieves values based on the provided
+    key prefix.
+
+    :param key: The `key` parameter in the `get_value_of` function is a string that is used to retrieve
+    a specific value from a configuration file based on certain prefixes. The function checks the prefix
+    of the key and then looks up the corresponding value in the configuration file. The prefixes it
+    checks for are "
+    :type key: str
+    :param config_file_path: The `config_file_path` parameter in the `get_value_of` function is the path
+    to the configuration file from which the function reads the configuration settings. This file is
+    expected to be in TOML format and contains configurations for different sections like `AppConfig`,
+    `DatasetConfig`, `ESConfig`,
+    :return: The function `get_value_of` reads a configuration file specified by `config_file_path` and
+    returns the value associated with the given `key`. Depending on the prefix of the key (e.g., "app_",
+    "dataset_", "es_", "log_"), it looks up the corresponding section in the configuration file
+    (`toml_config`) and returns the value associated with that key. If the key
+    """
     # Read configuration from  ~/.fs2elastic/fs2elastic.conf
     with open(config_file_path, "r") as f:
         toml_config = toml.load(f)
@@ -57,6 +90,18 @@ def get_value_of(key: str, config_file_path):
 
 
 def toml_conf_reader(config_file_path: str) -> Config:
+    """
+    The function `toml_conf_reader` reads configuration values from a TOML file and returns a `Config`
+    object.
+
+    :param config_file_path: The `config_file_path` parameter is the path to the configuration file from
+    which you want to read the configuration values. This function reads various configuration values
+    from the specified TOML configuration file and constructs a `Config` object with those values. The
+    `get_value_of` function is used to retrieve the
+    :type config_file_path: str
+    :return: An instance of the `Config` class with various attributes initialized with values read from
+    a TOML configuration file specified by the `config_file_path`.
+    """
 
     config = Config(
         app_home=Path(get_value_of("app_home", config_file_path)),
@@ -91,6 +136,17 @@ def toml_conf_reader(config_file_path: str) -> Config:
 def get_config(
     config_file_path: str = defaults["AppConfig"]["app_config_file_path"],
 ) -> Config:
+    """
+    The function `get_config` reads a TOML configuration file and returns a Config object.
+
+    :param config_file_path: The `config_file_path` parameter is the path to the configuration file that
+    will be used to initialize the application configuration. It is set to a default value obtained from
+    `defaults["AppConfig"]["app_config_file_path"]` if no value is provided when calling the
+    `get_config` function
+    :type config_file_path: str
+    :return: The function `get_config` is returning the result of calling `toml_conf_reader` with the
+    argument `conf_initializer(config_file_path)`.
+    """
     if not os.path.exists(defaults["AppConfig"]["app_home"]):
         os.makedirs(defaults["AppConfig"]["app_home"])
     return toml_conf_reader(conf_initializer(config_file_path))
