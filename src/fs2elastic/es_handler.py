@@ -1,6 +1,6 @@
-import logging
 from elasticsearch import Elasticsearch, helpers
 from fs2elastic.typings import Config
+from retry import retry
 
 
 def get_es_connection(config: Config) -> Elasticsearch:
@@ -15,10 +15,7 @@ def get_es_connection(config: Config) -> Elasticsearch:
     return es_client
 
 
-def put_es_bulk(config: Config, actions, process_id, chunk_id) -> None:
-    try:
-        es_client = get_es_connection(config)
-        helpers.bulk(client=es_client, actions=actions)
-        logging.info(f"{process_id}: Chunk {chunk_id + 1} Pushed Successfully!")
-    except Exception as e:
-        logging.error(f"{process_id}: Error Pushing Chunk {chunk_id + 1}: {e}")
+@retry(tries=10, delay=1, backoff=2, max_delay=10)
+def put_es_bulk(config: Config, actions) -> None:
+    es_client = get_es_connection(config)
+    helpers.bulk(client=es_client, actions=actions)

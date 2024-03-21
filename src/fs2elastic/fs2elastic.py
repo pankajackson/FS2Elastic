@@ -50,21 +50,21 @@ def is_file_extensions_supported(
 
 def process_event(config: Config, event: FileSystemEvent) -> bool:
     try:
-        process_id = uuid.uuid4().hex
+        event_id = uuid.uuid4().hex
         ds_processor = DatasetProcessor(
-            source_file=event.src_path, config=config, id=process_id
+            source_file=event.src_path, config=config, event_id=event_id
         )
-        logging.info(f"SYNC_STARTED: {process_id} {event.src_path}.")
+        logging.info(f"SYNC_STARTED: {event_id} {event.src_path}.")
         start_time = datetime.datetime.now()
         ds_processor.es_sync()
         end_time = datetime.datetime.now()
         total_time = end_time - start_time
         logging.info(
-            f"SYNC_FINISHED: {process_id} [duration: {total_time}] {event.src_path}."
+            f"SYNC_FINISHED: {event_id} [duration: {total_time}] {event.src_path}."
         )
         return True
     except Exception as e:
-        logging.error(f"SYNC_FAILED: {process_id} {event.src_path}.")
+        logging.error(f"SYNC_FAILED: {event_id} {event.src_path}.")
         logging.error(f"An unexpected error occurred: {e}")
         return False
 
@@ -96,8 +96,8 @@ class FSHandler(FileSystemEventHandler):
             return
         if is_file_extensions_supported(
             path=event.src_path,
-            source_dir=self.config.source_dir,
-            supported_file_extensions=self.config.source_supported_file_extensions,
+            source_dir=self.config.dataset_source_dir,
+            supported_file_extensions=self.config.dataset_supported_file_extensions,
         ):
             file_hash = hashlib.md5(open(event.src_path, "rb").read()).hexdigest()
             if self.file_cache.get(event.src_path) == file_hash:
@@ -118,7 +118,7 @@ class FSHandler(FileSystemEventHandler):
 def start_sync(config: Config) -> None:
     event_handler = FSHandler(config)
     observer = Observer()
-    observer.schedule(event_handler, path=config.source_dir, recursive=True)
+    observer.schedule(event_handler, path=config.dataset_source_dir, recursive=True)
     observer.start()
 
     try:

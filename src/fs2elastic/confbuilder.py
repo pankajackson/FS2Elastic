@@ -2,12 +2,12 @@ import os
 import pwd
 import toml
 from pathlib import Path
-from fs2elastic.typings import Config, AppConfig, SourceConfig, ESConfig, LogConfig
+from fs2elastic.typings import Config, AppConfig, DatasetConfig, ESConfig, LogConfig
 
 fs2elastic_home = os.path.join(pwd.getpwuid(os.getuid()).pw_dir, ".fs2elastic")
 defaults = {
     "AppConfig": AppConfig().model_dump(),
-    "SourceConfig": SourceConfig().model_dump(),
+    "DatasetConfig": DatasetConfig().model_dump(),
     "ESConfig": ESConfig().model_dump(),
     "LogConfig": LogConfig().model_dump(),
 }
@@ -18,7 +18,7 @@ def conf_initializer(config_file_path: str) -> str:
         file = open(config_file_path, "w")
         config = {
             "AppConfig": {**defaults["AppConfig"]},
-            "SourceConfig": {**defaults["SourceConfig"]},
+            "DatasetConfig": {**defaults["DatasetConfig"]},
             "ESConfig": {**defaults["ESConfig"]},
             "LogConfig": {**defaults["LogConfig"]},
         }
@@ -37,11 +37,11 @@ def get_value_of(key: str, config_file_path):
             return os.getenv(f"FS2ES_{key.upper()}", toml_config["AppConfig"][key])
         except KeyError:
             return defaults["AppConfig"][key]
-    elif key.startswith("source_"):
+    elif key.startswith("dataset_"):
         try:
-            return os.getenv(f"FS2ES_{key.upper()}", toml_config["SourceConfig"][key])
+            return os.getenv(f"FS2ES_{key.upper()}", toml_config["DatasetConfig"][key])
         except KeyError:
-            return defaults["SourceConfig"][key]
+            return defaults["DatasetConfig"][key]
     elif key.startswith("es_"):
         try:
             return os.getenv(f"FS2ES_{key.upper()}", toml_config["ESConfig"][key])
@@ -61,10 +61,15 @@ def toml_conf_reader(config_file_path: str) -> Config:
     config = Config(
         app_home=Path(get_value_of("app_home", config_file_path)),
         app_config_file_path=get_value_of("app_config_file_path", config_file_path),
-        source_dir=Path(get_value_of("source_dir", config_file_path)),
-        source_supported_file_extensions=get_value_of(
-            "source_supported_file_extensions", config_file_path
+        dataset_source_dir=Path(get_value_of("dataset_source_dir", config_file_path)),
+        dataset_supported_file_extensions=get_value_of(
+            "dataset_supported_file_extensions", config_file_path
         ),
+        dataset_max_workers=get_value_of("dataset_max_workers", config_file_path),
+        dataset_threads_per_worker=get_value_of(
+            "dataset_threads_per_worker", config_file_path
+        ),
+        dataset_chunk_size=get_value_of("dataset_chunk_size", config_file_path),
         es_hosts=get_value_of("es_hosts", config_file_path),
         es_username=get_value_of("es_username", config_file_path),
         es_password=get_value_of("es_password", config_file_path),
@@ -72,10 +77,6 @@ def toml_conf_reader(config_file_path: str) -> Config:
         es_index_prefix=get_value_of("es_index_prefix", config_file_path),
         es_ssl_ca=get_value_of("es_ssl_ca", config_file_path),
         es_verify_certs=get_value_of("es_verify_certs", config_file_path),
-        es_max_dataset_chunk_size=get_value_of(
-            "es_max_dataset_chunk_size", config_file_path
-        ),
-        es_max_worker_count=get_value_of("es_max_worker_count", config_file_path),
         log_file_path=get_value_of("log_file_path", config_file_path),
         log_max_size=int(
             get_value_of("log_max_size", config_file_path),
