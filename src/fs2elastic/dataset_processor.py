@@ -1,4 +1,4 @@
-import os, string, re
+import os, string, re, math
 import pandas as pd
 from typing import Any, Generator
 from threading import current_thread
@@ -95,22 +95,26 @@ class DatasetProcessor:
         }
 
     def __generate_batches(
-        self, batch_count: int
+        self, max_batch_count: int
     ) -> Generator[pd.DataFrame, Any, None]:
         """
-        This function generates batches of data from a DataFrame based on the specified batch count.
+        This function generates batches of data from a DataFrame based on specified parameters.
 
-        :param batch_count: The `batch_count` parameter represents the number of batches you want to
-        generate from the dataset. It determines how many chunks the dataset will be divided into for
-        processing
-        :type batch_count: int
+        :param max_batch_count: The `max_batch_count` parameter specifies the maximum number of batches that
+        should be generated during the batching process. This parameter is used to limit the number of
+        batches generated based on a certain criteria or constraint
+        :type max_batch_count: int
         """
         df_length = self.df().shape[0]
-        if df_length <= self.config.dataset_chunk_size:
-            batch_count = 1
-            logging.info(
-                f"{self.event_id}: Small Dataset Detected, Proceeding in a single batch"
-            )
+        batch_count = math.ceil(
+            df_length
+            / (self.config.dataset_chunk_size * self.config.dataset_threads_per_worker)
+        )
+        if batch_count > max_batch_count:
+            batch_count = max_batch_count
+        logging.info(
+            f"{self.event_id}: Dataset process proceeding in a {batch_count} batch"
+        )
         batch_size = df_length // batch_count
         extra_records = df_length % batch_count
 
@@ -199,7 +203,7 @@ class DatasetProcessor:
             max_workers=self.config.dataset_max_workers
         ) as executor:
             for batch_id, batch in enumerate(
-                self.__generate_batches(batch_count=self.config.dataset_max_workers)
+                self.__generate_batches(max_batch_count=self.config.dataset_max_workers)
             ):
                 if batch.empty:
                     break
