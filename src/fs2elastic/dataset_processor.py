@@ -113,7 +113,7 @@ class DatasetProcessor:
         if batch_count > max_batch_count:
             batch_count = max_batch_count
         logging.info(
-            f"{self.event_id}: Dataset process proceeding in a {batch_count} batch"
+            f"{self.event_id}: Dataset processing proceeding in {batch_count} batch(es) "
         )
         batch_size = df_length // batch_count
         extra_records = df_length % batch_count
