@@ -1,14 +1,23 @@
 import os, pwd
 from typing import Annotated
-from pydantic import BaseModel, FilePath, DirectoryPath, HttpUrl, AfterValidator
+from pydantic import (
+    BaseModel,
+    FilePath,
+    DirectoryPath,
+    HttpUrl,
+    TypeAdapter,
+    BeforeValidator,
+)
 
 
-# The line `HttpUrlString = Annotated[HttpUrl, AfterValidator(str)]` is defining a type alias
-# `HttpUrlString` using Python's `Annotated` feature from the `typing` module. It is specifying that
-# `HttpUrlString` is a string that should be validated as an HTTP URL using the `HttpUrl` type from
-# the `pydantic` library. Additionally, it is applying a custom validator `AfterValidator(str)` which
-# ensures that the string is a valid HTTP URL after converting it to a string.
-HttpUrlString = Annotated[HttpUrl, AfterValidator(str)]
+# The line `HttpUrlString = Annotated[str, BeforeValidator(lambda value:
+# str(TypeAdapter(HttpUrl).validate_python(value)))]` is defining a type alias `HttpUrlString` in
+# Python. This type alias is specifying that `HttpUrlString` is a string that should be validated as
+# an HTTP URL using the `HttpUrl` type from the `pydantic` library.
+HttpUrlString = Annotated[
+    str, BeforeValidator(lambda value: str(TypeAdapter(HttpUrl).validate_python(value)))
+]
+
 
 # define variable `fs2elastic_home` that represents the home directory path for a application
 fs2elastic_home = os.path.join(pwd.getpwuid(os.getuid()).pw_dir, ".fs2elastic")
