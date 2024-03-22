@@ -11,12 +11,12 @@ authors = [
 description = "Python based CLI for Syncing File System based Data (CSV file etc.) to Elasticsearch."
 readme = "README.md"
 license = {file = "LICENSE"}
-requires-python = ">=3.7"
-dependencies=['elasticsearch', 'pandas', 'toml', 'watchdog']
+requires-python = ">=3.10"
+dependencies=['elasticsearch', 'openpyxl', 'pandas', 'pydantic', 'retry', 'toml', 'watchdog', 'xlrd']
 keywords=['csv', 'sync', 'elasticsearch', 'data']
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Development Status :: 1 - Planning",
+    "Development Status ::  4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Operating System :: Unix",

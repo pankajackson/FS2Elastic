@@ -28,14 +28,19 @@ configuration file present at `~/.fs2elastic/fs2elastic.conf`.
 app_home = "/home/john/.fs2elastic"
 app_config_file_path = "/home/john/.fs2elastic/fs2elastic.conf"
 
-[SourceConfig]
-source_dir = "/home/john/csv_data_set"
-source_supported_file_extensions = [ "csv",]
+[DatasetConfig]
+dataset_source_dir = "/home/john/csv_data_set"
+dataset_supported_file_extensions = [ "csv", "xlsx", "xls", "json"]
+dataset_max_workers = 1
+dataset_threads_per_worker = 10
+dataset_chunk_size = 200
 
 [ESConfig]
 es_hosts = [ "https://localhost:9200",]
 es_username = "elastic"
 es_password = ""
+es_timeout = 300
+es_index_prefix = "fs2es-"
 es_ssl_ca = ""
 es_verify_certs = false
 
@@ -80,24 +85,31 @@ fs2elastic -v
 # install Package
 sudo pip install fs2elastic
 ```
+
 ```bash
 # Create fs2elastic home directory somewhere. for eg /tmp/fs2elastic/
 mkdir /tmp/fs2elastic/
 ```
+
 ```bash
 # create config file at /tmp/fs2elastic/fs2elastic.conf inside fs2elastic home directory created above
 [AppConfig]
 app_home = "/home/john/.fs2elastic"
 app_config_file_path = "/home/john/.fs2elastic/fs2elastic.conf"
 
-[SourceConfig]
-source_dir = "/home/john/csv_data_set"
-source_supported_file_extensions = [ "csv",]
+[DatasetConfig]
+dataset_source_dir = "/home/john/csv_data_set"
+dataset_supported_file_extensions = [ "csv", "xlsx", "xls", "json"]
+dataset_max_workers = 1
+dataset_threads_per_worker = 10
+dataset_chunk_size = 200
 
 [ESConfig]
-es_hosts = ["https://localhost:9200"]
+es_hosts = [ "https://localhost:9200",]
 es_username = "elastic"
 es_password = ""
+es_timeout = 300
+es_index_prefix = "fs2es-"
 es_ssl_ca = ""
 es_verify_certs = false
 
@@ -108,11 +120,12 @@ log_backup_count = 5
 
 # replace with correct values
 ```
+
 ```bash
 # create service file at /etc/systemd/system/fs2elastic.service  with following content
 
 [Unit]
-Description=RSync daemon Service
+Description=FS2Elastic Service
 After=network.target
 
 [Service]
@@ -124,30 +137,37 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 ```
+
 ```bash
 # Reloading Change to Systemd Unit Files
 sudo systemctl daemon-reload
 ```
+
 ```bash
 # Start service
 sudo systemctl start fs2elastic
 ```
+
 ```bash
 # Enable service to start on boot
 sudo systemctl enable fs2elastic
 ```
+
 ```bash
 # check status
 sudo systemctl status fs2elastic
 ```
+
 ```bash
 # check logs
 sudo tail -f /var/log/fs2elastic.log
 ```
+
 ```bash
 # To stop service
 sudo systemctl stop fs2elastic
 ```
+
 ```bash
 # To remove service
 sudo systemctl disable fs2elastic
