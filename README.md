@@ -2,6 +2,8 @@
 
 Python based CLI for Syncing File System based Data (CSV file etc.) to Elasticsearch.
 
+![alt text](https://github.com/pankajackson/FS2Elastic/blob/develop/docs/diagrams/FS2Elastic.png?raw=true)
+
 ### Features
 
 - Real time csv file to Elasticsearch dataset syncing
@@ -174,8 +176,6 @@ sudo systemctl disable fs2elastic
 sudo rm /etc/systemd/system/fs2elastic.service
 
 ```
-
-![alt text](https://github.com/pankajackson/FS2Elastic/blob/develop/docs/diagrams/FS2Elastic.png?raw=true)
 
 ### Uninstall
 
