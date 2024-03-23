@@ -175,6 +175,8 @@ sudo rm /etc/systemd/system/fs2elastic.service
 
 ```
 
+![alt text](https://github.com/pankajackson/FS2Elastic/blob/develop/docs/diagrams/FS2Elastic.png?raw=true)
+
 ### Uninstall
 
 ```bash
