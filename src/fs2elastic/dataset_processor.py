@@ -90,7 +90,7 @@ class DatasetProcessor:
             "_source": {
                 "record": record,
                 "fs2e_meta": self.meta,
-                "timestamp": datetime.now(tz=pytz.UTC),
+                "@timestamp": datetime.now(tz=pytz.UTC),
             },
         }
 
